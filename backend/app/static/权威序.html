@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>权威序 · 对拍</title>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+  <div class="壳">
+    <header class="顶栏">
+      <div class="顶左">
+        <div class="牌名">对拍</div>
+        <div class="牌骨">左轨装载 → 右轨装载 → 同键对齐落差 → 单边悬账 → 对拍结论</div>
+      </div>
+      <nav class="管线">
+          <a href="/">对拍台</a>
+          <a href="/左轨.html">左轨流水</a>
+          <a href="/右轨.html">右轨流水</a>
+          <a href="/对齐差.html">对齐差表</a>
+          <a href="/悬账单.html">悬账单</a>
+          <a href="/对拍结论.html">对拍结论</a>
+          <a href="/源登记.html">源登记</a>
+          <a href="/权威序.html" class="亮">权威序</a>
+          <a href="/轨规.html">轨规</a>
+      </nav>
+    </header>
+    <main class="主">
+
+      <section class="行卡">
+        <h1>源站权威序</h1>
+        <p class="说明">同键多源冲突的权威序主链。强源盖写：弱源进只读归档，现行只读强源；先到锁定：先到切流账册即锁，后到强源亦拒，除非人工解锁。源登记与左轨同票，仅认左轨登记源；逐笔加锁落账册，判定与弱源命运同成败。</p>
+      </section>
+
+      <section class="行卡 双栏">
+        <div>
+          <h2>策略</h2>
+          <div class="工具条">
+            <label>形态
+              <select id="形态">
+                <option value="强源盖写">强源盖写（弱源归档，现行只读强源）</option>
+                <option value="先到锁定">先到锁定（后到皆拒，人工解锁）</option>
+              </select>
+            </label>
+            <button id="存形态">保存形态</button>
+          </div>
+          <div class="标签行" id="策略签"></div>
+        </div>
+        <div>
+          <h2>源权威级（左轨登记源）</h2>
+          <div id="源表"></div>
+          <div class="工具条 mt8"><button id="存级">保存权威级</button></div>
+        </div>
+      </section>
+
+      <section class="行卡">
+        <h2>多源采集入库</h2>
+        <div class="工具条">
+          <select id="夹具"></select>
+          <button id="灌">灌入权威序夹具</button>
+          <button class="次" id="刷">刷新</button>
+        </div>
+        <pre class="报" id="报"></pre>
+      </section>
+
+      <section class="行卡">
+        <h2>权威账册 · 详情卡片</h2>
+        <div id="卡"></div>
+      </section>
+
+      <section class="行卡">
+        <h2>旁录（只读归档 / 拒绝 / 操作）</h2>
+        <div id="旁录"></div>
+      </section>
+
+    </main>
+  </div>
+  <script src="/common.js"></script>
+  <script>
+(async () => {
+  const 画策略 = async () => {
+    const s = await get("/api/权威序/策略");
+    document.getElementById("形态").value = s.形态;
+    document.getElementById("策略签").innerHTML =
+      [`当前形态：${s.形态}`, `权威源：${s.权威源 || "-"}`]
+        .map(t => `<span class="标签">${t}</span>`).join("");
+    document.getElementById("源表").innerHTML = 表(
+      ["源键","名称","权威级"],
+      s.源,
+      r => `<td>${r.源键}</td><td>${r.名称}</td>
+        <td><input data-级="${r.源键}" type="number" value="${r.权威级}" style="width:90px"/></td>`
+    );
+  };
+  const 画账册 = async () => {
+    const d = await get("/api/权威序");
+    document.getElementById("卡").innerHTML = d.行.length ? d.行.map(r => `
+      <div class="条主">
+        <b>${r.业务键}</b>
+        ${徽("valid:" + r.valid)} ${徽("现行:" + r.现行源)} ${r.锁定 ? 徽("锁定") : ""}
+        <div class="说明">权威源 ${r.权威源 || "-"} ｜ 现行事件 ${r.现行事件编号} ｜ 金额 ${r.现行金额分} ｜ 形态 ${r.形态} ｜ ${r.时刻}</div>
+        ${r.归档或拒因 ? `<div class="说明">归档或拒因：${r.归档或拒因}</div>` : ""}
+        ${r.锁定 ? `<div class="工具条 mt8"><button class="次" data-解="${r.业务键}">人工解锁</button></div>` : ""}
+      </div>`).join("") : '<div class="空">暂无数据</div>';
+    document.getElementById("旁录").innerHTML = 表(
+      ["编号","业务键","类别","源键","事件编号","金额分","原因","时刻"],
+      d.旁录,
+      p => `<td>${p.编号}</td><td>${p.业务键}</td><td>${徽(p.类别)}</td><td>${p.源键}</td>
+        <td>${p.事件编号}</td><td>${p.金额分 ?? ""}</td><td>${p.原因}</td><td>${p.时刻}</td>`
+    );
+    document.querySelectorAll("[data-解]").forEach(b => b.onclick = async () => {
+      document.getElementById("报").textContent = JSON.stringify(await post("/api/权威序/解锁", {业务键: b.dataset.解}), null, 2);
+      await 画账册();
+    });
+  };
+  const fixtures = (await get("/api/夹具")).filter(x => x.includes("权威"));
+  const sel = document.getElementById("夹具");
+  sel.innerHTML = fixtures.map(f => `<option value="${f}">${f}</option>`).join("") || '<option value="权威序样例">权威序样例</option>';
+  await 画策略(); await 画账册();
+  document.getElementById("存形态").onclick = async () => {
+    document.getElementById("报").textContent = JSON.stringify(await post("/api/权威序/策略", {形态: document.getElementById("形态").value}), null, 2);
+    await 画策略(); await 画账册();
+  };
+  document.getElementById("存级").onclick = async () => {
+    const 权威级 = {};
+    document.querySelectorAll("[data-级]").forEach(i => 权威级[i.dataset.级] = Number(i.value));
+    document.getElementById("报").textContent = JSON.stringify(await post("/api/权威序/策略", {权威级}), null, 2);
+    await 画策略(); await 画账册();
+  };
+  document.getElementById("灌").onclick = async () => {
+    document.getElementById("报").textContent = JSON.stringify(await post("/api/权威序/夹具/" + encodeURIComponent(sel.value)), null, 2);
+    await 画账册();
+  };
+  document.getElementById("刷").onclick = async () => { await 画策略(); await 画账册(); };
+})();
+  </script>
+</body>
+</html>

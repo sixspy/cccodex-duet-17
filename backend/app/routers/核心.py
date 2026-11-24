@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from app.services import 目录, 左装载, 右装载, 对齐, 结论, 夹具, 统计, 说明
+from app.modules.源站权威序 import 服务 as 权威序
 
 路由 = APIRouter()
 
@@ -51,19 +52,19 @@ def api_左装(体: dict):
 def api_右装(体: dict):
     return 右装载.装一批(体)
 
-@路由.post("/api/左轨/夹具/{名}")
-def api_左夹(名: str):
+@路由.post("/api/左轨/夹具/{name}")
+def api_左夹(name: str):
     try:
-        return 左装载.装一批(夹具.读取(名))
+        return 左装载.装一批(夹具.读取(name))
     except FileNotFoundError:
-        raise HTTPException(404, 名)
+        raise HTTPException(404, name)
 
-@路由.post("/api/右轨/夹具/{名}")
-def api_右夹(名: str):
+@路由.post("/api/右轨/夹具/{name}")
+def api_右夹(name: str):
     try:
-        return 右装载.装一批(夹具.读取(名))
+        return 右装载.装一批(夹具.读取(name))
     except FileNotFoundError:
-        raise HTTPException(404, 名)
+        raise HTTPException(404, name)
 
 @路由.post("/api/对齐/跑")
 def api_对齐():
@@ -72,6 +73,34 @@ def api_对齐():
 @路由.post("/api/对拍结论/跑")
 def api_结论():
     return 结论.跑一次()
+
+
+@路由.get("/api/权威序")
+def api_权威序():
+    return 权威序.权威序列表()
+
+@路由.get("/api/权威序/策略")
+def api_权威序策略():
+    return 权威序.策略()
+
+@路由.post("/api/权威序/策略")
+def api_改权威序策略(体: dict):
+    return 权威序.改策略(体)
+
+@路由.post("/api/权威序/采集")
+def api_权威序采集(体: dict):
+    return 权威序.采集(体)
+
+@路由.post("/api/权威序/夹具/{name}")
+def api_权威序夹具(name: str):
+    try:
+        return 权威序.采集(夹具.读取(name))
+    except FileNotFoundError:
+        raise HTTPException(404, name)
+
+@路由.post("/api/权威序/解锁")
+def api_权威序解锁(体: dict):
+    return 权威序.解锁(str(体.get("业务键") or ""))
 
 
 @路由.get("/api/统计/左命运")

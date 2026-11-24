@@ -66,6 +66,32 @@ CREATE TABLE IF NOT EXISTS 装载批次 (
   时刻 TEXT NOT NULL,
   报告 TEXT NOT NULL DEFAULT '{}'
 );
+CREATE TABLE IF NOT EXISTS 源权威 (
+  源键 TEXT PRIMARY KEY,
+  权威级 INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS 权威账册 (
+  业务键 TEXT PRIMARY KEY,
+  现行事件编号 TEXT NOT NULL,
+  现行源键 TEXT NOT NULL,
+  现行金额分 INTEGER NOT NULL,
+  现行权威级 INTEGER NOT NULL DEFAULT 0,
+  事件时 TEXT NOT NULL DEFAULT '',
+  形态 TEXT NOT NULL DEFAULT '强源盖写',
+  锁定 INTEGER NOT NULL DEFAULT 0,
+  时刻 TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS 权威旁录 (
+  编号 INTEGER PRIMARY KEY AUTOINCREMENT,
+  业务键 TEXT NOT NULL,
+  事件编号 TEXT NOT NULL DEFAULT '',
+  源键 TEXT NOT NULL DEFAULT '',
+  金额分 INTEGER,
+  事件时 TEXT NOT NULL DEFAULT '',
+  类别 TEXT NOT NULL,
+  原因 TEXT NOT NULL DEFAULT '',
+  时刻 TEXT NOT NULL
+);
 """
 
 
@@ -95,5 +121,18 @@ def 初始化库() -> None:
             "INSERT INTO 源登记(源键,轨别,名称,说明) VALUES (?,?,?,?)",
             ("核乙", "右", "核心记账乙", "核心系统记账流"),
         )
+    # 源站权威序：左轨多源权威级与默认形态（幂等，独立主链，不动对齐口径）
+    conn.execute(
+        "INSERT OR IGNORE INTO 源登记(源键,轨别,名称,说明) VALUES (?,?,?,?)",
+        ("渠乙", "左", "渠道回执乙", "支付渠道回执流·权威源"),
+    )
+    for 源, 级 in (("渠甲", 10), ("渠乙", 20)):
+        conn.execute(
+            "INSERT INTO 源权威(源键,权威级) VALUES (?,?) ON CONFLICT(源键) DO NOTHING",
+            (源, 级),
+        )
+    conn.execute(
+        "INSERT INTO 轨规(键,值) VALUES ('权威序形态','强源盖写') ON CONFLICT(键) DO NOTHING"
+    )
     conn.commit()
     conn.close()
